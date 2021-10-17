@@ -1,0 +1,123 @@
+
+-------------------- Data cleaning -------------------------
+SELECT *  
+FROM [PortfolioProjectHousing].[dbo].[Housing]
+
+-- Standardized Date Format
+
+ALTER TABLE [PortfolioProjectHousing].[dbo].[Housing]
+ADD SaleDateConverted date
+
+UPDATE [PortfolioProjectHousing].[dbo].[Housing]
+SET SaleDateConverted = CONVERT(date, saledate) 
+
+SELECT SaleDateConverted, CONVERT(date, saledate) 
+FROM [PortfolioProjectHousing].[dbo].[Housing]
+
+------------------------------------------------------------
+--Populate Property Address Data
+
+Select DISTINCT [PropertyAddress]
+from [PortfolioProjectHousing].[dbo].[Housing]
+ORDER BY 1 ASC
+
+Select * 
+from [PortfolioProjectHousing].[dbo].[Housing]
+where PropertyAddress is null
+ORDER BY 1 ASC
+
+
+;With CTE AS
+(
+select [UniqueID ],ParcelID,PropertyAddress 
+from [PortfolioProjectHousing].[dbo].[Housing]
+where PropertyAddress is null
+)
+
+
+SELECT cte.[UniqueID ],cte.ParcelID,cte.PropertyAddress, h.[UniqueID ], h.ParcelID, h.PropertyAddress
+FROM CTE INNER JOIN [PortfolioProjectHousing].[dbo].Housing h
+on CTE.parcelID = h.ParcelID 
+where cte.[UniqueID ] <> h.[UniqueID ]
+
+
+UPDATE CTE
+SET CTE.PropertyAddress = h.propertyaddress
+FROM CTE INNER JOIN [PortfolioProjectHousing].[dbo].Housing h
+on CTE.parcelID = h.ParcelID 
+where cte.[UniqueID ] <> h.[UniqueID ]
+
+------------------------------------------------------------------
+--Breaking out Address into Individual Columns (Address, City ,State)
+
+SELECT *,SUBSTRING(PropertyAddress,1,CHARINDEX(',',PropertyAddress)-1) as Address,
+       SUBSTRING(PropertyAddress,CHARINDEX(',',PropertyAddress)+1,LEN(PropertyAddress)) as City
+
+from [PortfolioProjectHousing].[dbo].[Housing]
+
+ALTER TABLE [PortfolioProjectHousing].[dbo].[Housing]
+ADD PropertySplitAddress nvarchar (255)
+
+
+ALTER TABLE [PortfolioProjectHousing].[dbo].[Housing]
+ADD PropertySplitCity nvarchar (255)
+
+
+ALTER TABLE [PortfolioProjectHousing].[dbo].[Housing]
+
+
+update [PortfolioProjectHousing].[dbo].[Housing]
+set PropertySplitAddress = SUBSTRING(PropertyAddress,1,CHARINDEX(',',PropertyAddress)-1)
+
+update [PortfolioProjectHousing].[dbo].[Housing]
+set PropertySplitCity = SUBSTRING(PropertyAddress,CHARINDEX(',',PropertyAddress)+1,LEN(PropertyAddress))
+
+
+
+SELECT PARSENAME(REPLACE(OwnerAddress,',','.'),3)
+from [PortfolioProjectHousing].[dbo].[Housing]
+
+
+ALTER TABLE [PortfolioProjectHousing].[dbo].[Housing]
+ADD OwnerSplitAddress nvarchar (255)
+
+ALTER TABLE [PortfolioProjectHousing].[dbo].[Housing]
+ADD OwnerSplitCity nvarchar (255)
+
+ALTER TABLE [PortfolioProjectHousing].[dbo].[Housing]
+ADD OwnerSplitState nvarchar (255)
+
+update [PortfolioProjectHousing].[dbo].[Housing]
+set OwnerSplitAddress = PARSENAME(REPLACE(OwnerAddress,',','.'),3)
+
+
+update [PortfolioProjectHousing].[dbo].[Housing]
+set OwnerSplitCity = PARSENAME(REPLACE(OwnerAddress,',','.'),2)
+
+
+update [PortfolioProjectHousing].[dbo].[Housing]
+set OwnerSplitState = PARSENAME(REPLACE(OwnerAddress,',','.'),1)
+
+----------------------------------------------------------------------
+
+--Change Y and N to Yes and No in "Sold as vacant" field
+
+SELECT SoldAsVacant
+FROM [PortfolioProjectHousing].[dbo].[Housing]
+where SoldAsVacant in ('YES' , 'NO')
+
+update [PortfolioProjectHousing].[dbo].[Housing]
+set SoldAsVacant = 'Yes'
+where SoldAsVacant = 'Y'
+
+
+update [PortfolioProjectHousing].[dbo].[Housing]
+set SoldAsVacant = 'No'
+where SoldAsVacant = 'N'
+
+----------------------------------------------------------------------
+
+--Delete Unused Columns
+
+ALTER TABLE [PortfolioProjectHousing].[dbo].[Housing]
+DROP COLUMN TaxDistrict, HalfBath
